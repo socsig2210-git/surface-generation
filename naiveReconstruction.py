@@ -57,23 +57,27 @@ def naiveReconstruction(points, normals, X, Y, Z):
     ##########################################################
     # <================START MODIFYING CODE<================>
     ##########################################################
-
-    # replace this random implicit function with your naive surface reconstruction implementation!
-    IF = np.random.rand(X.shape[0], X.shape[1], X.shape[2]) - 0.5
+    
 
     # this is an example of a kd-tree nearest neighbor search (adapt it accordingly for your task)
 	# use kd-trees to find nearest neighbors efficiently!
 	# kd-tree: https://en.wikipedia.org/wiki/K-d_tree
     Q = np.array([X.reshape(-1), Y.reshape(-1), Z.reshape(-1)]).transpose()
     tree = KDTree(points)
-    _, idx = tree.query(Q, k=2)  
-	
+    _, idx = tree.query(Q) # Dont need k=2, only closest neighbor is needed
+    
+    points_vec = points[idx[:,0]] # Closest points vector 
+    normals_vec = normals[idx[:,0]] # Closest points' normals vector
+    
+    # Compute the signed distance to the tangent plane of the surface point nearest to each point
+    # Reshape to to grid's shape
+    IF = np.sum((Q - points_vec) * normals_vec, axis=1).reshape(X.shape)    
+ 
     ##########################################################
     # <================END MODIFYING CODE<================>
     ##########################################################
 
     return IF 
-
 
 
 if __name__ == '__main__':

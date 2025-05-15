@@ -1,0 +1,6 @@
+numpy
+scikit-image
+scikit-learn
+trimesh
+pyglet==1.5
+torch
