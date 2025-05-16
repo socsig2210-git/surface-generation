@@ -70,7 +70,7 @@ def naiveReconstruction(points, normals, X, Y, Z):
     normals_vec = normals[idx[:,0]] # Closest points' normals vector
     
     # Compute the signed distance to the tangent plane of the surface point nearest to each point
-    # Reshape to to grid's shape
+    # Reshape to the grid's shape
     IF = np.sum((Q - points_vec) * normals_vec, axis=1).reshape(X.shape)    
  
     ##########################################################

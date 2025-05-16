@@ -23,6 +23,7 @@ def train(dataset, model, optimizer, args):
     loss_sum = 0.0
     loss_count = 0.0
     num_batch = len(dataset)
+    clamping_distance = args.clamping_distance
     for i in range(num_batch):
         data = dataset[i]  # a dict
         optimizer.zero_grad()
@@ -30,12 +31,29 @@ def train(dataset, model, optimizer, args):
         xyz_tensor = data['xyz'].to(device) # convert to tensor
         pred_sdf_tensor = model(xyz_tensor) # forward pass
         
+        
         ##########################################################
         # <================START MODIFYING CODE<================>
-        ##########################################################       
-        # **** YOU SHOULD ADD TRAINING CODE FOR THE LOSS HERE, CURRENTLY IT IS INCORRECT ****
-        loss_sum += 1. * xyz_tensor.shape[0]
+        ##########################################################
+        
+        actual_sdf_tensor = data['gt_sdf'].to(device) # actual sdf data to tensor
+        
+        pred_sdf_tensor = torch.clamp(pred_sdf_tensor, -clamping_distance, clamping_distance)
+        actual_sdf_tensor = torch.clamp(actual_sdf_tensor, -clamping_distance, clamping_distance)
+        
+        # loss = torch.nn.functional.l1_loss(pred_sdf_tensor, actual_sdf_tensor, reduction='mean') # Use mean?
+        # loss_sum += 1.*loss.data
+        # loss_count += xyz_tensor.shape[0]
+        
+        loss = torch.abs(actual_sdf_tensor - pred_sdf_tensor).mean()
+        loss_sum += loss.item() * xyz_tensor.shape[0]
         loss_count += xyz_tensor.shape[0]
+        
+        loss.backward()
+        
+        # loss_sum += 1. * xyz_tensor.shape[0]
+        # loss_count += xyz_tensor.shape[0]
+        
         # ***********************************************************************
         ##########################################################
         # <================END MODIFYING CODE<================>
@@ -52,6 +70,7 @@ def val(dataset, model, optimizer, args):
     loss_sum = 0.0
     loss_count = 0.0
     num_batch = len(dataset)
+    clamping_distance = args.clamping_distance
     for i in range(num_batch):
         data = dataset[i]  # a dict
         
@@ -62,8 +81,17 @@ def val(dataset, model, optimizer, args):
         ##########################################################              
         # **** YOU SHOULD ADD VALIDATION CODE HERE, CURRENTLY IT IS INCORRECT ****
         with torch.no_grad():
-            xyz_tensor = data['xyz'].to(device)
-            loss_sum += 1. * xyz_tensor.shape[0]
+
+            actual_sdf_tensor = data['gt_sdf'].to(device) # actual sdf data to tensor
+            pred_sdf_tensor = model(xyz_tensor) # forward pass
+            
+            pred_sdf_tensor = torch.clamp(pred_sdf_tensor, -clamping_distance, clamping_distance)
+            actual_sdf_tensor = torch.clamp(actual_sdf_tensor, -clamping_distance, clamping_distance)
+            
+            loss = torch.abs(actual_sdf_tensor - pred_sdf_tensor).mean()
+            # loss = torch.nn.functional.l1_loss(pred_sdf_tensor, actual_sdf_tensor, reduction='mean') # Use mean?
+            
+            loss_sum += loss.item() * xyz_tensor.shape[0]
             loss_count += xyz_tensor.shape[0]
         # ***********************************************************************
         ##########################################################

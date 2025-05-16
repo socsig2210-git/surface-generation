@@ -24,9 +24,22 @@ class Decoder(nn.Module):
         # Read the instruction carefully for layer details.
         # Pay attention that your implementation should include FC layers, weight_norm layers,
         # Leaky ReLU layers, Dropout layers and a tanh layer.
-        self.fc = nn.Linear(3, 1)
+                     
         self.dropout_prob = dropout_prob
+        self.activation = nn.LeakyReLU()
+        self.dropout = nn.Dropout(dropout_prob)       
+
+        self.fc1 = nn.utils.weight_norm(nn.Linear(3, 512))
+        self.fc2 = nn.utils.weight_norm(nn.Linear(512, 512))
+        self.fc3 = nn.utils.weight_norm(nn.Linear(512, 512))
+        self.fc4 = nn.utils.weight_norm(nn.Linear(512, 509))
+        self.fc5 = nn.utils.weight_norm(nn.Linear(512, 512))
+        self.fc6 = nn.utils.weight_norm(nn.Linear(512, 512))
+        self.fc7 = nn.utils.weight_norm(nn.Linear(512, 512))
+        self.fc8 = nn.Linear(512, 1)
         self.th = nn.Tanh()
+
+        
         # ***********************************************************************
         ##########################################################
         # <================END MODIFYING CODE<================>
@@ -40,8 +53,35 @@ class Decoder(nn.Module):
         ##########################################################
         # **** YOU SHOULD IMPLEMENT THE FORWARD PASS HERE ****
         # Based on the architecture defined above, implement the feed forward procedure
-        x = self.fc(input)
+        
+        # First 7 layers: weight_normal -> LeakyRelu common learnable slope -> dropout layer 
+        
+        # TODO: CREATE COMMON LEAKYRELU LAYER FOR ALL
+        
+        x = self.fc1(input)
+        x = self.dropout(F.leaky_relu(x))
+        
+        x = self.fc2(x)
+        x = self.dropout(F.leaky_relu(x))
+   
+        x = self.fc3(x)
+        x = self.dropout(F.leaky_relu(x))
+        
+        x = self.fc4(x)
+        x = self.dropout(F.leaky_relu(x))
+        
+        x = self.fc5(torch.cat([x, input], dim=1)) # add points as input at 5th fc layer's input
+        x = self.dropout(F.leaky_relu(x))
+        
+        x = self.fc6(x)
+        x = self.dropout(F.leaky_relu(x))
+        
+        x = self.fc7(x)
+        x = self.dropout(F.leaky_relu(x))
+        
+        x = self.fc8(x)
         x = self.th(x)
+        
         # ***********************************************************************
         ##########################################################  
         # <================END MODIFYING CODE<================>
