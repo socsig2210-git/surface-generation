@@ -15,76 +15,63 @@ class Decoder(nn.Module):
         use_tanh=True
     ):
         super(Decoder, self).__init__()
-
-        ##########################################################
-        # <================START MODIFYING CODE<================>
-        ##########################################################
-        # **** YOU SHOULD IMPLEMENT THE MODEL ARCHITECTURE HERE ****
-        # Define the network architecture based on the figure shown in the assignment page.
-        # Read the instruction carefully for layer details.
-        # Pay attention that your implementation should include FC layers, weight_norm layers,
-        # Leaky ReLU layers, Dropout layers and a tanh layer.
-                     
-        self.dropout_prob = dropout_prob
-        self.activation = nn.LeakyReLU()
-        self.dropout = nn.Dropout(dropout_prob)       
-
-        self.fc1 = nn.utils.weight_norm(nn.Linear(3, 512))
-        self.fc2 = nn.utils.weight_norm(nn.Linear(512, 512))
-        self.fc3 = nn.utils.weight_norm(nn.Linear(512, 512))
-        self.fc4 = nn.utils.weight_norm(nn.Linear(512, 509))
-        self.fc5 = nn.utils.weight_norm(nn.Linear(512, 512))
-        self.fc6 = nn.utils.weight_norm(nn.Linear(512, 512))
-        self.fc7 = nn.utils.weight_norm(nn.Linear(512, 512))
-        self.fc8 = nn.Linear(512, 1)
-        self.th = nn.Tanh()
-
         
-        # ***********************************************************************
-        ##########################################################
-        # <================END MODIFYING CODE<================>
-        ##########################################################
+        self.use_tanh = use_tanh
+        self.latent_in = latent_in
+        self.dropout_list = dropout
+        self.dropout_prob = dropout_prob
+        
+        self.dropout = nn.Dropout(dropout_prob)  
+        self.activation = nn.LeakyReLU()
+        self.th = nn.Tanh()
+        
+        # Create layers
+        # 3 -> 512 -> 512 -> 512 -> 509+3 -> 512 -> 512 -> 512 -> 1 ->
+        self.fc_layers = nn.ModuleList()
+        for i in range(len(dims)):
+            # First layer's input dim = 3
+            in_dim = 3 if i == 0 else dims[i-1]
+            
+            # Output of previous layer of latent input layer, subtract output dim by 3 
+            if i+1 in latent_in:
+                out_dim = dims[i] - 3
+            # Last layer's output dim = 1 
+            elif i == len(dims)-1:
+                out_dim = 1
+            else:
+                out_dim = dims[i]
+            
+            x = nn.Linear(in_dim, out_dim)
+            
+            # Weight normalization for chosen fc layers
+            # Last layer as per assignment's description doesn't include weight_normal -> activation -> dropout
+            if weight_norm and i in norm_layers and i != len(dims)-1:
+                x = nn.utils.weight_norm(x)
+            
+            self.fc_layers.append(x)
+            
+        
     
     # input: N x 3
     def forward(self, input):
+        
+        x = input
+        for i, layer in enumerate(self.fc_layers):
+            if i in self.latent_in:
+                # Concat adding more columns
+                x = torch.cat([x, input], dim=1)
+            x = layer(x)
+            
+            # Last layer as per assignment's description doesn't include weight_normal -> activation -> dropout
+            # Also evaluation output appears better that way :)
+            if i == len(self.fc_layers) - 1:
+                break
+            
+            x = self.activation(x)
+            if i in self.dropout_list:
+                x = self.dropout(x)
 
-        ##########################################################
-        # <================START MODIFYING CODE<================>
-        ##########################################################
-        # **** YOU SHOULD IMPLEMENT THE FORWARD PASS HERE ****
-        # Based on the architecture defined above, implement the feed forward procedure
-        
-        # First 7 layers: weight_normal -> LeakyRelu common learnable slope -> dropout layer 
-        
-        # TODO: CREATE COMMON LEAKYRELU LAYER FOR ALL
-        
-        x = self.fc1(input)
-        x = self.dropout(F.leaky_relu(x))
-        
-        x = self.fc2(x)
-        x = self.dropout(F.leaky_relu(x))
-   
-        x = self.fc3(x)
-        x = self.dropout(F.leaky_relu(x))
-        
-        x = self.fc4(x)
-        x = self.dropout(F.leaky_relu(x))
-        
-        x = self.fc5(torch.cat([x, input], dim=1)) # add points as input at 5th fc layer's input
-        x = self.dropout(F.leaky_relu(x))
-        
-        x = self.fc6(x)
-        x = self.dropout(F.leaky_relu(x))
-        
-        x = self.fc7(x)
-        x = self.dropout(F.leaky_relu(x))
-        
-        x = self.fc8(x)
-        x = self.th(x)
-        
-        # ***********************************************************************
-        ##########################################################  
-        # <================END MODIFYING CODE<================>
-        ##########################################################
+        if self.use_tanh:
+            x = self.th(x)
 
         return x

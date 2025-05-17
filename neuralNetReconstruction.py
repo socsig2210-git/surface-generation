@@ -46,15 +46,7 @@ def train(dataset, model, optimizer, args):
         
         # Compute gradients (only in training)
         loss.backward()
-        
-        # loss_sum += 1. * xyz_tensor.shape[0]
-        # loss_count += xyz_tensor.shape[0]
-        
-        # ***********************************************************************
-        ##########################################################
-        # <================END MODIFYING CODE<================>
-        ##########################################################       
-
+            
         optimizer.step()
 
     return loss_sum / loss_count
