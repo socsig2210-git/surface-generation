@@ -29,26 +29,22 @@ def train(dataset, model, optimizer, args):
         optimizer.zero_grad()
         
         xyz_tensor = data['xyz'].to(device) # convert to tensor
-        pred_sdf_tensor = model(xyz_tensor) # forward pass
         
-        
-        ##########################################################
-        # <================START MODIFYING CODE<================>
-        ##########################################################
-        
+        # Get dataset's sdf values and predicted sdf's values
         actual_sdf_tensor = data['gt_sdf'].to(device) # actual sdf data to tensor
+        pred_sdf_tensor = model(xyz_tensor) # forward input points
         
+        # Clamp both tensors
         pred_sdf_tensor = torch.clamp(pred_sdf_tensor, -clamping_distance, clamping_distance)
         actual_sdf_tensor = torch.clamp(actual_sdf_tensor, -clamping_distance, clamping_distance)
         
-        # loss = torch.nn.functional.l1_loss(pred_sdf_tensor, actual_sdf_tensor, reduction='mean') # Use mean?
-        # loss_sum += 1.*loss.data
-        # loss_count += xyz_tensor.shape[0]
+        # Compute l1 loss
+        loss = torch.nn.functional.l1_loss(pred_sdf_tensor, actual_sdf_tensor)
         
-        loss = torch.abs(actual_sdf_tensor - pred_sdf_tensor).mean()
         loss_sum += loss.item() * xyz_tensor.shape[0]
         loss_count += xyz_tensor.shape[0]
         
+        # Compute gradients (only in training)
         loss.backward()
         
         # loss_sum += 1. * xyz_tensor.shape[0]
@@ -76,28 +72,22 @@ def val(dataset, model, optimizer, args):
         
         xyz_tensor = data['xyz'].to(device)
         
-        ##########################################################
-        # <================START MODIFYING CODE<================>
-        ##########################################################              
-        # **** YOU SHOULD ADD VALIDATION CODE HERE, CURRENTLY IT IS INCORRECT ****
         with torch.no_grad():
 
+            # Get dataset's sdf values and predicted sdf's values
             actual_sdf_tensor = data['gt_sdf'].to(device) # actual sdf data to tensor
-            pred_sdf_tensor = model(xyz_tensor) # forward pass
+            pred_sdf_tensor = model(xyz_tensor) # forward input points
             
+            # Clamp both tensors
             pred_sdf_tensor = torch.clamp(pred_sdf_tensor, -clamping_distance, clamping_distance)
             actual_sdf_tensor = torch.clamp(actual_sdf_tensor, -clamping_distance, clamping_distance)
             
-            loss = torch.abs(actual_sdf_tensor - pred_sdf_tensor).mean()
-            # loss = torch.nn.functional.l1_loss(pred_sdf_tensor, actual_sdf_tensor, reduction='mean') # Use mean?
+            # Compute l1 loss
+            loss = torch.nn.functional.l1_loss(pred_sdf_tensor, actual_sdf_tensor)
             
             loss_sum += loss.item() * xyz_tensor.shape[0]
             loss_count += xyz_tensor.shape[0]
-        # ***********************************************************************
-        ##########################################################
-        # <================END MODIFYING CODE<================>
-        ##########################################################             
- 
+        
     return loss_sum / loss_count
 
 
